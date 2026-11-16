@@ -1,4 +1,4 @@
-# ProxiSpeak — Virtual Office Prototype
+# ProxiSpeak — Virtual Office 
 
 A React + Node.js + Socket.IO prototype for the Infotact ProxiSpeak project brief.
 
