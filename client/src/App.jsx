@@ -49,6 +49,9 @@ export default function App() {
   const presenceRef = useRef('auto');
   const pendingIceRef = useRef(new Map());
   const makingOfferRef = useRef(new Set());
+  const floorMapRef = useRef(null);
+  const mapPointerActiveRef = useRef(false);
+  const lastMapMoveAtRef = useRef(0);
 
   useEffect(() => {
     audioEngineRef.current = new AudioEngine({ maxDistance: AUDIO_RANGE });
@@ -363,7 +366,12 @@ export default function App() {
     roomRef.current = requestedRoom;
     setRoomId(requestedRoom);
 
-    const socket = io(SERVER_URL);
+   const socket = io(SERVER_URL, {
+  transports: ['polling'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  timeout: 20000,
+});
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -376,10 +384,11 @@ export default function App() {
       });
     });
 
-    socket.on('connect_error', () => {
-      setConnected(false);
-      setStatus('Cannot reach the server. Start the server and try again.');
-    });
+   socket.on('connect_error', (error) => {
+  console.error('Socket connection error:', error);
+  setConnected(false);
+  setStatus(`Connection failed: ${error.message}`);
+});
 
     socket.on('disconnect', () => {
       setConnected(false);
@@ -498,6 +507,50 @@ export default function App() {
       y: next.y,
     });
   }, []);
+
+  // Convert responsive map pixels into the server's fixed 800x500 world.
+  // Pointer events support touch, stylus and mouse without changing Socket.IO.
+  const moveToMapPoint = useCallback((clientX, clientY, force = false) => {
+    const map = floorMapRef.current;
+    const socket = socketRef.current;
+    const current = selfRef.current;
+    if (!map || !socket?.connected || !current) return;
+
+    const now = performance.now();
+    if (!force && now - lastMapMoveAtRef.current < 75) return;
+    lastMapMoveAtRef.current = now;
+
+    const rect = map.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const x = Math.max(24, Math.min(776, ((clientX - rect.left) / rect.width) * 800));
+    const y = Math.max(24, Math.min(476, ((clientY - rect.top) / rect.height) * 500));
+    const next = { ...current, x, y };
+
+    selfRef.current = next;
+    setUsers((old) => old.map((user) => user.id === next.id ? next : user));
+    socket.emit('avatar:move', { x, y });
+  }, []);
+
+  const handleMapPointerDown = (event) => {
+    if (!joined || !selfRef.current) return;
+    event.preventDefault();
+    mapPointerActiveRef.current = true;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    moveToMapPoint(event.clientX, event.clientY, true);
+  };
+
+  const handleMapPointerMove = (event) => {
+    if (!mapPointerActiveRef.current) return;
+    event.preventDefault();
+    moveToMapPoint(event.clientX, event.clientY);
+  };
+
+  const handleMapPointerUp = (event) => {
+    if (!mapPointerActiveRef.current) return;
+    moveToMapPoint(event.clientX, event.clientY, true);
+    mapPointerActiveRef.current = false;
+  };
 
   // Keyboard movement.
   useEffect(() => {
@@ -940,13 +993,22 @@ export default function App() {
         <div className="ps-workspace-content">
           <section className="ps-page-heading">
             <div><span className="ps-overline">LIVE COLLABORATION SPACE</span><h1>{roomId}<span className="ps-heading-live"><i/> LIVE</span></h1><p>Your team is one step away. Move around to start a conversation.</p></div>
-            <div className="ps-key-guide"><span className="ps-key-icon">⌘</span><div><b>MOVE YOUR AVATAR</b><small><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>or arrow keys</span></small></div></div>
+            <div className="ps-key-guide"><span className="ps-key-icon">⌘</span><div><b>MOVE YOUR AVATAR</b><small><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>or arrow keys · touch on mobile</span></small></div></div>
           </section>
 
           <div className="ps-dashboard-grid">
             <section className="ps-floor-card">
               <div className="ps-section-head"><div><span className="ps-overline">THE FLOOR PLAN</span><h2>Office overview</h2><p>Everyone's position, updated in real time</p></div><div className="ps-floor-meta"><span className="ps-live-indicator"><i/> LIVE MAP</span><span>{users.length} IN SPACE</span></div></div>
-              <div className="ps-floor-map">
+              <div
+                className="ps-floor-map"
+                ref={floorMapRef}
+                onPointerDown={handleMapPointerDown}
+                onPointerMove={handleMapPointerMove}
+                onPointerUp={handleMapPointerUp}
+                onPointerCancel={() => { mapPointerActiveRef.current = false; }}
+                role="application"
+                aria-label="Office floor plan. Tap or drag to move your avatar."
+              >
                 <div className="ps-floor-grid" />
                 <div className="ps-zone ps-zone-lounge"><span className="ps-zone-label">01 / SOCIAL LOUNGE</span><div className="ps-sofa"><i/><i/><i/></div><div className="ps-plant plant-a">✳</div><div className="ps-plant plant-b">✳</div><span className="ps-zone-caption">Take a break, have a chat</span></div>
                 <div className="ps-zone ps-zone-focus"><span className="ps-zone-label">02 / FOCUS PODS</span><div className="ps-focus-desk desk-a"><i/><b/><span/></div><div className="ps-focus-desk desk-b"><i/><b/><span/></div><span className="ps-zone-caption">Quiet space for deep work</span></div>
@@ -986,6 +1048,16 @@ export default function App() {
                   );
                 })}
                 {!users.length && <div className="ps-map-empty"><span>⌁</span><b>Your workspace is ready</b><small>Waiting for teammates to arrive</small></div>}
+              </div>
+              <div className="ps-touch-controls" aria-label="Avatar movement controls">
+                <span>MOVE YOUR AVATAR</span>
+                <div className="ps-touch-pad">
+                  <button type="button" aria-label="Move up" onClick={() => move(0, -22)}>↑</button>
+                  <button type="button" aria-label="Move left" onClick={() => move(-22, 0)}>←</button>
+                  <button type="button" aria-label="Move down" onClick={() => move(0, 22)}>↓</button>
+                  <button type="button" aria-label="Move right" onClick={() => move(22, 0)}>→</button>
+                </div>
+                <small>Or tap / drag anywhere on the floor plan.</small>
               </div>
               <div className="ps-map-legend"><span><i className="legend-you"/> YOU</span><span><i className="legend-close"/> IN YOUR RANGE</span><span><i className="legend-away"/> TEAMMATE</span><small>PROXIMITY RANGE · {DISTANCE_LIMIT}px</small></div>
             </section>

@@ -2110,3 +2110,179 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+
+
+/* Mobile-first avatar movement: map taps/drags plus an accessible touch pad. */
+.ps-floor-map {
+  touch-action: none;
+  cursor: crosshair;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.ps-touch-controls {
+  display: none;
+}
+.ps-touch-pad button {
+  appearance: none;
+  min-width: 46px;
+  min-height: 44px;
+  border: 1px solid #454765;
+  border-radius: 11px;
+  color: #f3f0ff;
+  background: linear-gradient(145deg, #292b43, #1a1d2e);
+  font-size: 20px;
+  font-weight: 800;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.ps-touch-pad button:active {
+  transform: scale(.96);
+  border-color: #8f80ef;
+  background: #39345f;
+}
+.ps-touch-pad button:focus-visible {
+  outline: 2px solid #a998ff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 850px) {
+  .ps-touch-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid #303149;
+    border-radius: 12px;
+    background: #111522;
+  }
+  .ps-touch-controls > span {
+    color: #a6a2c5;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+  }
+  .ps-touch-controls > small {
+    flex-basis: 100%;
+    color: #858ba4;
+    font-size: 10px;
+  }
+  .ps-touch-pad {
+    display: grid;
+    grid-template-columns: repeat(4, 46px);
+    gap: 6px;
+  }
+}
+
+@media (max-width: 600px) {
+  .ps-app {
+    grid-template-columns: 1fr;
+    min-height: 100dvh;
+    padding-bottom: 0;
+  }
+  .ps-rail {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    width: 100%;
+    height: auto;
+    min-height: 56px;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid #292b40;
+  }
+  .ps-rail-logo {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+  }
+  .ps-rail-divider,
+  .ps-rail-spacer {
+    display: none;
+  }
+  .ps-rail-item {
+    width: 38px;
+    height: 38px;
+  }
+  .ps-main-column {
+    min-width: 0;
+    width: 100%;
+  }
+  .ps-topbar {
+    position: relative;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ps-topbar-actions {
+    justify-content: space-between;
+  }
+  .ps-dashboard-grid,
+  .ps-right-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ps-floor-map {
+    width: 100%;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+  }
+  .ps-floor-card {
+    min-width: 0;
+    padding: 10px;
+  }
+  .ps-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ps-floor-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .ps-zone-label {
+    max-width: 90%;
+    font-size: clamp(5px, 1.7vw, 7px);
+    letter-spacing: .5px;
+  }
+  .ps-person-marker {
+    width: 28px;
+    height: 28px;
+  }
+  .ps-map-name {
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ps-audio-dock {
+    position: sticky;
+    bottom: 0;
+    z-index: 35;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    padding: 9px 10px calc(9px + env(safe-area-inset-bottom));
+    border-radius: 14px 14px 0 0;
+  }
+  .ps-audio-identity small {
+    font-size: 9px;
+  }
+  .ps-mic-button {
+    min-height: 42px;
+    white-space: nowrap;
+  }
+  .ps-audio-help {
+    grid-column: 1 / -1;
+    display: block;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .ps-drawer {
+    left: 10px;
+    right: 10px;
+    top: 68px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: none;
+  }
+}

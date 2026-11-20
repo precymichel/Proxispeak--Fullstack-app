@@ -28,6 +28,7 @@ const CLIENT_ORIGINS = (process.env.CLIENT_ORIGIN ||
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+console.log('Allowed frontend origins:', CLIENT_ORIGINS);
 const AWAY_AFTER_MS = 60_000;
 const PRESENCE_REFRESH_MS = 15_000;
 const PROXIMITY_RADIUS = 100;
